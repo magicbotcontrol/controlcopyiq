@@ -3,16 +3,15 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
   Users, 
-  TrendingUp, 
   Coins, 
   Link2, 
   Settings, 
-  Bot, 
   Menu, 
   X, 
   LogOut,
   UserCheck
 } from 'lucide-react';
+import { BRANDING } from '@/branding';
 import { UserAuth } from '../types';
 
 interface SidebarProps {
@@ -40,10 +39,10 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
       <header className="md:hidden flex items-center justify-between bg-zinc-950 text-white px-5 py-4 border-b border-zinc-800 sticky top-0 z-40 shadow-md">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#FF5500] flex items-center justify-center font-bold text-black text-sm tracking-tighter">
-            CCI
+            {BRANDING.shortName}
           </div>
           <span className="font-extrabold text-lg tracking-tight text-white">
-            Control<span className="text-[#FF5500]">Copy</span>IQ
+            {BRANDING.wordmark.prefix}<span className="text-[#FF5500]">{BRANDING.wordmark.accent}</span>
           </span>
         </div>
         
@@ -80,10 +79,10 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
               <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-[#FF5500] flex items-center justify-center font-bold text-black text-sm">
-                    CCI
+                    {BRANDING.shortName}
                   </div>
                   <span className="font-extrabold text-lg tracking-tight">
-                    Control<span className="text-[#FF5500]">Copy</span>
+                    {BRANDING.wordmark.prefix}<span className="text-[#FF5500]">{BRANDING.wordmark.accent}</span>
                   </span>
                 </div>
                 <button 
@@ -149,14 +148,14 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
           {/* Logo */}
           <div className="flex items-center gap-3.5 mb-8 px-2">
             <div className="w-10 h-10 rounded-xl bg-[#FF5500] flex items-center justify-center font-extrabold text-black text-base tracking-tighter">
-              CC
+              {BRANDING.shortName}
             </div>
             <div>
               <span className="font-extrabold text-xl tracking-tight block">
-                Control<span className="text-[#FF5500]">Copy</span>
+                {BRANDING.wordmark.prefix}<span className="text-[#FF5500]">{BRANDING.wordmark.accent}</span>
               </span>
               <span className="text-[10px] text-zinc-500 font-mono tracking-widest block -mt-1 uppercase">
-                INTELLIGENT IQ
+                {BRANDING.subtitle}
               </span>
             </div>
           </div>
@@ -207,7 +206,7 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
         {/* Footer info/logout */}
         <div className="border-t border-zinc-900 pt-5 px-1">
           <div className="text-[10px] text-zinc-650 flex flex-col gap-0.5 mb-4 text-zinc-500">
-            <p>Control Copy IQ v1.5</p>
+            <p>{`${BRANDING.productName} ${BRANDING.version}`}</p>
             <p className="font-mono text-[9px]">UTC 2026-05-29</p>
           </div>
           <button

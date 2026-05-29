@@ -6,6 +6,7 @@ import Indicators from './components/Indicators';
 import Billing from './components/Billing';
 import LinksAndInstructions from './components/LinksAndInstructions';
 import Settings from './components/Settings';
+import { BRANDING } from '@/branding';
 import Auth from './components/Auth';
 import { UserAuth } from './types';
 import { ControlCopyDB } from './lib/db';
@@ -16,6 +17,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
 
   useEffect(() => {
+    document.title = BRANDING.documentTitle;
+
     // Check if user is already authenticated in LocalStorage
     const storedAuth = ControlCopyDB.getAuth();
     if (storedAuth && storedAuth.email) {

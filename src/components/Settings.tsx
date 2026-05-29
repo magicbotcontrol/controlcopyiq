@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
+import { BRANDING } from '@/branding';
 import { Configuracoes, UserAuth } from '../types';
 import { ControlCopyDB } from '../lib/db';
 
@@ -57,7 +58,7 @@ export default function Settings() {
     setTestSent(null);
     setTestError(null);
 
-    const testMsg = `🧪 *Control Copy IQ - Teste de Conexão OK*\n\nParabéns! Se você está lendo esta mensagem, o seu chatbot do Telegram está integrado e as credenciais foram validadas com sucesso para o canal de alertas e repasses operacionais.`;
+    const testMsg = `🧪 *${BRANDING.telegramTestTitle}*\n\nParabéns! Se você está lendo esta mensagem, o seu chatbot do Telegram está integrado e as credenciais foram validadas com sucesso para o canal de alertas e repasses operacionais.`;
 
     const result = await ControlCopyDB.triggerTelegramNotification(testMsg);
     setIsTesting(false);

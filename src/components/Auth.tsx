@@ -12,6 +12,7 @@ import {
   Phone,
   Send
 } from 'lucide-react';
+import { BRANDING } from '@/branding';
 import { UserAuth, AccessLevel } from '../types';
 import { ControlCopyDB } from '../lib/db';
 
@@ -112,12 +113,12 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         {/* App Logo Header */}
         <div className="text-center space-y-1.5">
           <div className="w-12 h-12 bg-[#FF5500] text-black rounded-2xl flex items-center justify-center mx-auto font-black text-xl shadow-lg shadow-[#FF5500]/25">
-            CCI
+            {BRANDING.shortName}
           </div>
           <h2 className="text-xl font-extrabold text-zinc-900 tracking-tight">
-            Control<span className="text-[#FF5500]">Copy</span>IQ
+            {BRANDING.wordmark.prefix}<span className="text-[#FF5500]">{BRANDING.wordmark.accent}</span>
           </h2>
-          <p className="text-xs text-zinc-400 font-medium">Plataforma SaaS de Gestão de Clientes e Repasses</p>
+          <p className="text-xs text-zinc-400 font-medium">{BRANDING.loginDescription}</p>
         </div>
 
         {alertMsg && (
@@ -195,7 +196,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
               type="submit"
               className="w-full py-3 bg-[#FF5500] hover:bg-[#FF4500] text-black rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1 shadow-md shadow-[#FF5500]/15 cursor-pointer"
             >
-              Acessar Painel Control Copy
+              {BRANDING.loginCta}
               <ArrowRight className="w-4 h-4 text-black stroke-[3px]" />
             </button>
 

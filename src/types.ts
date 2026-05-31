@@ -64,7 +64,16 @@ export interface Configuracoes {
 export type AccessLevel = 'Admin' | 'Operador' | 'Financeiro';
 
 export interface UserAuth {
+  id?: string;
   email: string;
   nome: string;
   level: AccessLevel;
+}
+
+export interface SystemLog {
+  id: string;
+  acao: string;
+  detalhe: string;
+  data: string;
+  user: string;
 }

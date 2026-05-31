@@ -36,7 +36,7 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
   return (
     <>
       {/* Mobile Top Header Bar */}
-      <header className="md:hidden flex items-center justify-between bg-zinc-950 text-white px-5 py-4 border-b border-zinc-800 sticky top-0 z-40 shadow-md">
+      <header className="xl:hidden flex items-center justify-between bg-zinc-950 text-white px-5 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 border-b border-zinc-800 sticky top-0 z-40 shadow-md">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#FF5500] flex items-center justify-center font-bold text-black text-sm tracking-tighter">
             {BRANDING.shortName}
@@ -66,7 +66,7 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black z-50 md:hidden"
+              className="fixed inset-0 bg-black z-50 xl:hidden"
             />
             {/* Sidebar Drawer */}
             <motion.div 
@@ -74,7 +74,7 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-72 bg-zinc-950 text-white z-50 flex flex-col p-6 shadow-2xl md:hidden"
+              className="fixed inset-y-0 left-0 w-72 bg-zinc-950 text-white z-50 flex flex-col p-6 shadow-2xl xl:hidden"
             >
               <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800">
                 <div className="flex items-center gap-2">
@@ -143,7 +143,7 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
       </AnimatePresence>
 
       {/* Desktop Sidebar Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-zinc-950 text-white border-r border-zinc-850 h-screen sticky top-0 py-6 px-5 justify-between">
+      <aside className="hidden xl:flex flex-col w-64 bg-zinc-950 text-white border-r border-zinc-850 h-screen sticky top-0 py-6 px-5 justify-between">
         <div>
           {/* Logo */}
           <div className="flex items-center gap-3.5 mb-8 px-2">
@@ -220,7 +220,7 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
       </aside>
 
       {/* Mobile Sticky Bottom-Bar Navigation for rapid touch feedback */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-900 py-2.5 px-3 flex justify-around items-center z-40 text-xs shadow-xl">
+      <nav className="xl:hidden fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-900 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] px-3 flex justify-around items-center z-40 text-xs shadow-xl">
         {menuItems.slice(0, 4).map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;

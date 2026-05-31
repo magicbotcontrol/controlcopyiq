@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
-  KeyRound, 
   Mail, 
   User, 
   Lock, 
   ArrowRight, 
   CheckCircle2, 
-  AlertCircle,
-  Sparkles,
-  Phone,
-  Send
+  AlertCircle
 } from 'lucide-react';
 import { BRANDING } from '@/branding';
 import { UserAuth, AccessLevel } from '../types';
 import { ControlCopyDB } from '../lib/db';
+import { getCurrentAuthProfile, sendPasswordReset, signInWithEmail, signUpWithEmail } from '../lib/auth';
 
 interface AuthProps {
   onLoginSuccess: (auth: UserAuth) => void;
@@ -22,80 +19,116 @@ interface AuthProps {
 
 export default function Auth({ onLoginSuccess }: AuthProps) {
   const [screen, setScreen] = useState<'login' | 'register' | 'recover'>('login');
-  
-  // Login Form States
-  const [email, setEmail] = useState('alineevangelista1994@gmail.com');
-  const [password, setPassword] = useState('••••••••');
-  const [accessLevel, setAccessLevel] = useState<AccessLevel>('Admin');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  // Register Form States
   const [regNome, setRegNome] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
   const [regLevel, setRegLevel] = useState<AccessLevel>('Admin');
 
-  // Recovery Form States
   const [recEmail, setRecEmail] = useState('');
-
-  // Status Alerts
   const [alertMsg, setAlertMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       setAlertMsg({ type: 'error', text: 'Por favor preencha seu e-mail cadastrado.' });
       return;
     }
 
-    // Authenticate and save
-    const authData: UserAuth = {
-      email,
-      nome: email === 'alineevangelista1994@gmail.com' ? 'Aline Evangelista' : 'Usuário Conectado',
-      level: accessLevel
-    };
+    try {
+      setIsSubmitting(true);
+      const authData = await signInWithEmail(email, password);
 
-    ControlCopyDB.saveAuth(authData);
-    ControlCopyDB.addLog('Login Realizado', `Sessão iniciada como ${authData.level}: ${authData.nome}`);
-    onLoginSuccess(authData);
+      if (!authData) {
+        throw new Error('Nao foi possivel recuperar o perfil do usuario autenticado.');
+      }
+
+      await ControlCopyDB.addLog('Login Realizado', `Sessão iniciada como ${authData.level}: ${authData.nome}`);
+      onLoginSuccess(authData);
+    } catch (error) {
+      setAlertMsg({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Falha ao autenticar no Supabase.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regNome || !regEmail) {
+    if (!regNome || !regEmail || !regPassword) {
       setAlertMsg({ type: 'error', text: 'Preencha todos os campos obrigatórios.' });
       return;
     }
 
-    const authData: UserAuth = {
-      email: regEmail,
-      nome: regNome,
-      level: regLevel
-    };
+    try {
+      setIsSubmitting(true);
+      const { session } = await signUpWithEmail({
+        email: regEmail,
+        password: regPassword,
+        nome: regNome,
+        level: regLevel,
+      });
 
-    ControlCopyDB.saveAuth(authData);
-    ControlCopyDB.addLog('Cadastro Administrativo', `Novo operador registrado e logado: ${regNome}`);
-    
-    setAlertMsg({ type: 'success', text: 'Registro administrativa concluído com sucesso!' });
-    setTimeout(() => {
-      onLoginSuccess(authData);
-    }, 1500);
+      if (!session) {
+        setAlertMsg({
+          type: 'success',
+          text: 'Cadastro realizado. Se o projeto exigir confirmação por e-mail, confirme sua conta antes de entrar.',
+        });
+        setScreen('login');
+        return;
+      }
+
+      const authData = await getCurrentAuthProfile();
+
+      if (!authData) {
+        throw new Error('Usuario criado, mas o perfil nao foi carregado corretamente.');
+      }
+
+      await ControlCopyDB.addLog('Cadastro Administrativo', `Novo operador registrado e logado: ${regNome}`);
+      setAlertMsg({ type: 'success', text: 'Registro administrativo concluido com sucesso!' });
+      setTimeout(() => onLoginSuccess(authData), 800);
+    } catch (error) {
+      setAlertMsg({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Falha ao criar a conta no Supabase.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleRecover = (e: React.FormEvent) => {
+  const handleRecover = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recEmail) {
       setAlertMsg({ type: 'error', text: 'Preencha o e-mail de recuperação.' });
       return;
     }
 
-    setAlertMsg({ 
-      type: 'success', 
-      text: `Instruções de redefinição de credenciais enviadas para ${recEmail} com sucesso!` 
-    });
-    
-    setTimeout(() => {
-      setScreen('login');
-      setAlertMsg(null);
-    }, 4500);
+    try {
+      setIsSubmitting(true);
+      await sendPasswordReset(recEmail);
+      setAlertMsg({
+        type: 'success',
+        text: `Instruções de redefinição de credenciais enviadas para ${recEmail} com sucesso!`,
+      });
+
+      setTimeout(() => {
+        setScreen('login');
+        setAlertMsg(null);
+      }, 4500);
+    } catch (error) {
+      setAlertMsg({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Falha ao enviar a recuperacao de senha.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -108,7 +141,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="w-full max-w-md bg-white border border-zinc-150 rounded-3xl overflow-hidden shadow-2xl p-6 md:p-8 space-y-6 relative"
+        className="w-full max-w-md bg-white border border-zinc-150 rounded-3xl overflow-hidden shadow-2xl p-6 xl:p-8 space-y-6 relative"
       >
         {/* App Logo Header */}
         <div className="text-center space-y-1.5">
@@ -161,27 +194,6 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
               </div>
             </div>
 
-            {/* Simulated selector of roles to easily test Admin, Operator and Financial scopes */}
-            <div className="p-3 bg-zinc-50 border border-zinc-150 rounded-2xl">
-              <span className="text-[10px] font-bold text-zinc-400 font-mono block uppercase tracking-wider mb-2">Simular Cargo para Testes:</span>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(['Admin', 'Operador', 'Financeiro'] as AccessLevel[]).map(level => (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => setAccessLevel(level)}
-                    className={`py-2 px-1 rounded-xl font-bold font-mono text-[9px] border transition-all ${
-                      accessLevel === level 
-                        ? 'bg-zinc-950 text-[#FF5500] border-zinc-850 shadow' 
-                        : 'bg-white text-zinc-500 hover:text-zinc-800'
-                    }`}
-                  >
-                    {level.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="flex justify-between items-center text-[11px] pt-1">
               <button 
                 type="button" 
@@ -194,9 +206,10 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
 
             <button
               type="submit"
+                disabled={isSubmitting}
               className="w-full py-3 bg-[#FF5500] hover:bg-[#FF4500] text-black rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1 shadow-md shadow-[#FF5500]/15 cursor-pointer"
             >
-              {BRANDING.loginCta}
+              {isSubmitting ? 'Entrando...' : BRANDING.loginCta}
               <ArrowRight className="w-4 h-4 text-black stroke-[3px]" />
             </button>
 
@@ -249,6 +262,22 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
             </div>
 
             <div>
+              <label className="block mb-1">Senha de Acesso *</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5" />
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="Minimo de 6 caracteres"
+                  className="w-full pl-9 pr-3 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
               <label className="block mb-1">Selecione seu Nível Operacional Inicial</label>
               <select
                 value={regLevel}
@@ -263,9 +292,10 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
 
             <button
               type="submit"
+                disabled={isSubmitting}
               className="w-full py-3 bg-zinc-950 hover:bg-zinc-900 text-[#FF5500] rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1 shadow-md"
             >
-              Criar Conta e Conectar
+              {isSubmitting ? 'Criando Conta...' : 'Criar Conta e Conectar'}
               <ArrowRight className="w-4 h-4 stroke-[3px]" />
             </button>
 
@@ -303,9 +333,10 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
 
             <button
               type="submit"
+                disabled={isSubmitting}
               className="w-full py-3 bg-zinc-950 hover:bg-zinc-900 text-[#FF5500] rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1 shadow-md"
             >
-              Enviar Link de Redefinição
+              {isSubmitting ? 'Enviando...' : 'Enviar Link de Redefinição'}
             </button>
 
             <div className="text-center pt-2">

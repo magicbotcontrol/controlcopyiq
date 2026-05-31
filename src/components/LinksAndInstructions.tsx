@@ -24,7 +24,11 @@ export default function LinksAndInstructions() {
   const [copiedLink, setCopiedLink] = useState<'cadastro' | 'copy' | null>(null);
 
   useEffect(() => {
-    setIndicators(ControlCopyDB.getIndicators());
+    const loadIndicators = async () => {
+      setIndicators(await ControlCopyDB.getIndicators());
+    };
+
+    loadIndicators();
   }, []);
 
   const baseRegLink = 'https://iqoption.net/lp/mobile-partner-pwa/?aff=417345&aff_model=revenue';
@@ -46,7 +50,7 @@ export default function LinksAndInstructions() {
         <p className="text-sm text-zinc-500">Acesse links de indicação conectados a afiliados e instruções de faturamento do copy trading.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         
         {/* Left Column: Official links generator */}
         <div className="bg-white border border-zinc-150 rounded-2xl p-5 shadow-sm space-y-5">

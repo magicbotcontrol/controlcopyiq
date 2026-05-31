@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { BRANDING } from './branding';
 import path from 'path';
-import {defineConfig} from 'vite';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig(() => {
   return {
@@ -27,6 +27,11 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+    },
+    test: {
+      environment: 'node',
+      globals: true,
+      include: ['src/**/*.test.ts'],
     },
   };
 });

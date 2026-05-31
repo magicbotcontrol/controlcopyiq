@@ -48,14 +48,20 @@ export default function Indicators() {
     loadData();
   }, []);
 
-  const loadData = () => {
-    setIndicators(ControlCopyDB.getIndicators());
-    setUsers(ControlCopyDB.getUsers());
-    setCobrancas(ControlCopyDB.getCobrancas());
+  const loadData = async () => {
+    const [dbIndicators, dbUsers, dbCobrancas] = await Promise.all([
+      ControlCopyDB.getIndicators(),
+      ControlCopyDB.getUsers(),
+      ControlCopyDB.getCobrancas(),
+    ]);
+
+    setIndicators(dbIndicators);
+    setUsers(dbUsers);
+    setCobrancas(dbCobrancas);
   };
 
   // Create submission
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
 
@@ -70,7 +76,7 @@ export default function Indicators() {
       return;
     }
 
-    ControlCopyDB.addIndicator({
+    await ControlCopyDB.addIndicator({
       nome,
       email,
       telegram,
@@ -90,15 +96,15 @@ export default function Indicators() {
     setPercentual(10);
     setObservacoes('');
     setIsAddModalOpen(false);
-    loadData();
+    await loadData();
   };
 
   // Edit action
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedInd) return;
 
-    ControlCopyDB.updateIndicator({
+    await ControlCopyDB.updateIndicator({
       ...selectedInd,
       nome,
       email,
@@ -112,13 +118,13 @@ export default function Indicators() {
 
     setIsEditModalOpen(false);
     setSelectedInd(null);
-    loadData();
+    await loadData();
   };
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Tem certeza que deseja remover o indicador "${name}"? Os usuários continuarão cadastrados, mas perderão a referência do indicador.`)) {
-      ControlCopyDB.deleteIndicator(id);
-      loadData();
+      await ControlCopyDB.deleteIndicator(id);
+      await loadData();
     }
   };
 
@@ -131,7 +137,7 @@ export default function Indicators() {
   return (
     <div className="space-y-6">
       {/* Top action row */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-zinc-900 tracking-tight">Afiliados & Parceiros (Indicadores)</h1>
           <p className="text-sm text-zinc-500">Cadastre e monitore comissões e faturamentos de repasses automáticos dos seus parceiros.</p>
@@ -164,7 +170,7 @@ export default function Indicators() {
       </div>
 
       {/* Grid Cards of Indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {filteredInds.map(ind => {
           // Associated Users calculations
           const linkedUsers = users.filter(u => u.indicador_id === ind.id);

@@ -40,34 +40,40 @@ export default function Billing() {
     loadData();
   }, []);
 
-  const loadData = () => {
-    setCobrancas(ControlCopyDB.getCobrancas());
-    setUsers(ControlCopyDB.getUsers());
-    setIndicators(ControlCopyDB.getIndicators());
+  const loadData = async () => {
+    const [dbCobrancas, dbUsers, dbIndicators] = await Promise.all([
+      ControlCopyDB.getCobrancas(),
+      ControlCopyDB.getUsers(),
+      ControlCopyDB.getIndicators(),
+    ]);
+
+    setCobrancas(dbCobrancas);
+    setUsers(dbUsers);
+    setIndicators(dbIndicators);
   };
 
   // Mark as paid handler
-  const handleMarkAsPaid = (id: string) => {
-    ControlCopyDB.updateCobrancaStatus(id, 'Pago');
-    loadData();
+  const handleMarkAsPaid = async (id: string) => {
+    await ControlCopyDB.updateCobrancaStatus(id, 'Pago');
+    await loadData();
   };
 
   // Mark as pending
-  const handleMarkAsPending = (id: string) => {
-    ControlCopyDB.updateCobrancaStatus(id, 'Pendente');
-    loadData();
+  const handleMarkAsPending = async (id: string) => {
+    await ControlCopyDB.updateCobrancaStatus(id, 'Pendente');
+    await loadData();
   };
 
   // Delete billing record
-  const handleDeleteCobranca = (id: string) => {
+  const handleDeleteCobranca = async (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este registro de cobrança do histórico?')) {
-      ControlCopyDB.deleteCobranca(id);
-      loadData();
+      await ControlCopyDB.deleteCobranca(id);
+      await loadData();
     }
   };
 
   // Create manual bill cycle
-  const handleSubmitBill = (e: React.FormEvent) => {
+  const handleSubmitBill = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
 
@@ -76,12 +82,12 @@ export default function Billing() {
       return;
     }
 
-    const cob = ControlCopyDB.billUserCycle(selectedUserId, Number(profitAmount));
+    const cob = await ControlCopyDB.billUserCycle(selectedUserId, Number(profitAmount));
     if (cob) {
       setSelectedUserId('');
       setProfitAmount(100);
       setIsAddBillOpen(false);
-      loadData();
+      await loadData();
     } else {
       setFormError('Não foi possível gerar a fatura. Verifique os dados.');
     }
@@ -111,7 +117,7 @@ export default function Billing() {
   return (
     <div className="space-y-6">
       {/* Top Title Action menu */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-zinc-900 tracking-tight">Cobranças & Faturamento</h1>
           <p className="text-sm text-zinc-500">Acompanhe as faturas de serviços copy trading, controle os lucros divididos e repasse de comissões.</p>
@@ -130,7 +136,7 @@ export default function Billing() {
       </div>
 
       {/* Mini Financial Widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="bg-white border border-zinc-150 rounded-2xl p-4 flex items-center justify-between shadow-sm">
           <div>
             <span className="text-[10px] text-zinc-400 font-mono font-bold uppercase block">Pendente (Ciclo Aberto)</span>

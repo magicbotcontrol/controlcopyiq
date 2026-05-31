@@ -15,7 +15,7 @@ import {
   HelpCircle,
   BellRing
 } from 'lucide-react';
-import { UserCopy, Cobranca, Indicador, HistoricoBanca } from '../types';
+import { UserCopy, Cobranca, Indicador, HistoricoBanca, SystemLog } from '../types';
 import { ControlCopyDB, dateUtils } from '../lib/db';
 
 interface DashboardProps {
@@ -27,25 +27,33 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [indicators, setIndicators] = useState<Indicador[]>([]);
   const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
   const [histories, setHistories] = useState<HistoricoBanca[]>([]);
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<SystemLog[]>([]);
   const [showCronResult, setShowCronResult] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    setUsers(ControlCopyDB.getUsers());
-    setIndicators(ControlCopyDB.getIndicators());
-    setCobrancas(ControlCopyDB.getCobrancas());
-    setHistories(ControlCopyDB.getHistoricos());
-    setLogs(ControlCopyDB.getLogs());
+  const loadData = async () => {
+    const [dbUsers, dbIndicators, dbCobrancas, dbHistoricos, dbLogs] = await Promise.all([
+      ControlCopyDB.getUsers(),
+      ControlCopyDB.getIndicators(),
+      ControlCopyDB.getCobrancas(),
+      ControlCopyDB.getHistoricos(),
+      ControlCopyDB.getLogs(),
+    ]);
+
+    setUsers(dbUsers);
+    setIndicators(dbIndicators);
+    setCobrancas(dbCobrancas);
+    setHistories(dbHistoricos);
+    setLogs(dbLogs);
   };
 
   // Run Cron simulation
-  const handleRunCron = () => {
-    const res = ControlCopyDB.runDailyAutomations();
-    loadData();
+  const handleRunCron = async () => {
+    const res = await ControlCopyDB.runDailyAutomations();
+    await loadData();
     setShowCronResult(
       `Verificação diária executada com sucesso! ${res.updatedCharges} faturas vencidas marcadas como atrasadas e alertas de ciclos enviados.`
     );
@@ -85,7 +93,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   return (
     <div className="space-y-6 pb-20">
       {/* Top Welcome Title & Automation row */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900">
             Resumos Operacionais

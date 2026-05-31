@@ -28,24 +28,35 @@ export default function Settings() {
   const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
-    setConfig(ControlCopyDB.getConfig());
-    setAuth(ControlCopyDB.getAuth());
+    const loadData = async () => {
+      const [dbConfig, dbAuth] = await Promise.all([
+        ControlCopyDB.getConfig(),
+        ControlCopyDB.getAuth(),
+      ]);
+
+      setConfig(dbConfig);
+      if (dbAuth) {
+        setAuth(dbAuth);
+      }
+    };
+
+    loadData();
   }, []);
 
-  const handleSaveConfig = (e: React.FormEvent) => {
+  const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    ControlCopyDB.saveConfig(config);
-    ControlCopyDB.addLog('Configurações Atualizadas', 'Token e Chat ID do bot do Telegram editados no console');
+    await ControlCopyDB.saveConfig(config);
+    await ControlCopyDB.addLog('Configurações Atualizadas', 'Token e Chat ID do bot do Telegram editados no console');
     setShowSavedSuccess(true);
     setTimeout(() => {
       setShowSavedSuccess(false);
     }, 4000);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    ControlCopyDB.saveAuth(auth);
-    ControlCopyDB.addLog('Perfil Atualizado', 'Nível de permissão administrativa persistido');
+    await ControlCopyDB.saveAuth(auth);
+    await ControlCopyDB.addLog('Perfil Atualizado', 'Nível de permissão administrativa persistido');
     setShowSavedSuccess(true);
     setTimeout(() => {
       setShowSavedSuccess(false);
@@ -64,12 +75,17 @@ export default function Settings() {
     setIsTesting(false);
     if (result.sent) {
       setTestSent(true);
-      ControlCopyDB.addLog('Mensagem de Teste Disparada', 'Fired test connection test webhook to Telegram Bot successfully');
+      await ControlCopyDB.addLog('Mensagem de Teste Disparada', 'Fired test connection test webhook to Telegram Bot successfully');
     } else {
       setTestSent(false);
       setTestError(result.error || 'Erro desconhecido');
     }
   };
+
+  const isTelegramConfigured = Boolean(config.telegram_token && config.telegram_chat_id);
+  const maskedTelegramToken = config.telegram_token
+    ? `${'•'.repeat(Math.min(12, config.telegram_token.length))}${config.telegram_token.slice(-6)}`
+    : '';
 
   return (
     <div className="space-y-6 max-w-4xl pb-16">
@@ -78,7 +94,7 @@ export default function Settings() {
         <p className="text-sm text-zinc-500">Configure tokens do chatbot do Telegram, níveis de acesso internos e credenciais operacionais.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         
         {/* Telegram bot configurations */}
         <div className="bg-white border border-zinc-150 rounded-2xl p-5 shadow-sm space-y-4">
@@ -233,18 +249,46 @@ export default function Settings() {
       </div>
 
       {/* Bot tutorial help box */}
-      <div className="p-5 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-3 font-medium text-xs leading-relaxed text-zinc-650">
-        <h4 className="font-extrabold text-[#FF5500] uppercase font-mono text-[10px] tracking-widest flex items-center gap-1">
-          <HelpCircle className="w-4 h-4" />
-          Como obter as credenciais do Telegram?
-        </h4>
-        <ol className="list-decimal list-inside space-y-1 pl-1 text-zinc-550">
-          <li>Fale com o <strong className="text-zinc-900">@BotFather</strong> no Telegram e digite <code className="bg-zinc-150 py-0.5 px-1 rounded text-zinc-800">/newbot</code>. Defina nome e usuário e guarde o <code className="bg-zinc-150 py-0.5 px-1 rounded text-zinc-800">API TOKEN</code> gerado.</li>
-          <li>Crie um canal de alertas ou grupo público/privado onde você receberá as notificações de faturamento.</li>
-          <li>Adicione o seu robô recém-criado como administrador no grupo ou canal (com permissões de postar mensagens).</li>
-          <li>Para descobrir seu Chat ID, envie um teste no grupo e acesse <code className="bg-zinc-150 py-0.5 px-1 rounded text-zinc-800 font-mono">https://api.telegram.org/bot[TOKEN_AQUI]/getUpdates</code> ou use bots do Telegram como <strong className="text-zinc-900">@ShowJsonBot</strong> adicionando-o lá.</li>
-        </ol>
-      </div>
+      {isTelegramConfigured ? (
+        <div className="p-5 bg-white border border-zinc-150 rounded-2xl shadow-sm space-y-3 text-xs text-zinc-650">
+          <div className="flex items-center gap-2 pb-2 border-b border-zinc-100">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <div>
+              <h4 className="font-extrabold text-zinc-900">Telegram configurado</h4>
+              <p className="text-[11px] text-zinc-500">Integração pronta para alertas e faturamento. Não é necessário seguir o guia de API.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-zinc-150 bg-zinc-50 px-3 py-2.5">
+              <span className="block text-[10px] uppercase font-mono text-zinc-400">Token</span>
+              <span className="block font-mono text-[11px] font-bold text-zinc-700 break-all">{maskedTelegramToken}</span>
+            </div>
+            <div className="rounded-xl border border-zinc-150 bg-zinc-50 px-3 py-2.5">
+              <span className="block text-[10px] uppercase font-mono text-zinc-400">Chat ID</span>
+              <span className="block font-mono text-[11px] font-bold text-zinc-700 break-all">{config.telegram_chat_id}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500 font-semibold">
+            <span>Use “Testar Conexão Bot” para validar quando quiser.</span>
+            <span className="text-zinc-400">Para trocar credenciais, edite os campos acima e salve.</span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-5 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-3 font-medium text-xs leading-relaxed text-zinc-650">
+          <h4 className="font-extrabold text-[#FF5500] uppercase font-mono text-[10px] tracking-widest flex items-center gap-1">
+            <HelpCircle className="w-4 h-4" />
+            Como obter as credenciais do Telegram?
+          </h4>
+          <ol className="list-decimal list-inside space-y-1 pl-1 text-zinc-550">
+            <li>Fale com o <strong className="text-zinc-900">@BotFather</strong> no Telegram e digite <code className="bg-zinc-150 py-0.5 px-1 rounded text-zinc-800">/newbot</code>. Defina nome e usuário e guarde o <code className="bg-zinc-150 py-0.5 px-1 rounded text-zinc-800">API TOKEN</code> gerado.</li>
+            <li>Crie um canal de alertas ou grupo público/privado onde você receberá as notificações de faturamento.</li>
+            <li>Adicione o seu robô recém-criado como administrador no grupo ou canal (com permissões de postar mensagens).</li>
+            <li>Para descobrir seu Chat ID, envie um teste no grupo e acesse <code className="bg-zinc-150 py-0.5 px-1 rounded text-zinc-800 font-mono">https://api.telegram.org/bot[TOKEN_AQUI]/getUpdates</code> ou use bots do Telegram como <strong className="text-zinc-900">@ShowJsonBot</strong> adicionando-o lá.</li>
+          </ol>
+        </div>
+      )}
     </div>
   );
 }

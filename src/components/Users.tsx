@@ -23,10 +23,14 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { UserCopy, Indicador, Cobranca, HistoricoBanca } from '../types';
+import { UserCopy, Indicador, Cobranca, HistoricoBanca, UserAuth } from '../types';
 import { ControlCopyDB, dateUtils } from '../lib/db';
 
-export default function Users() {
+interface UsersProps {
+  auth: UserAuth;
+}
+
+export default function Users({ auth }: UsersProps) {
   const createEmptyEditForm = () => ({
     id: '',
     nome: '',
@@ -76,6 +80,8 @@ export default function Users() {
   const [editForm, setEditForm] = useState(createEmptyEditForm);
   const [editFormError, setEditFormError] = useState('');
   const [editSuccessMessage, setEditSuccessMessage] = useState<string | null>(null);
+  const [deleteSuccessMessage, setDeleteSuccessMessage] = useState<string | null>(null);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
 
   // Balance Update Form States
   const [newBalance, setNewBalance] = useState<number>(0);
@@ -107,17 +113,17 @@ export default function Users() {
   const tempCopySplit = bancaInicial < 1000 ? 30 : 20;
   const tempIndicatorSplit = indicadorId ? (bancaInicial < 1000 ? 15 : 10) : 0;
   const tempCompanySplit = tempCopySplit - tempIndicatorSplit;
+  const isRecommendedMinimumBalance = bancaInicial >= 100;
   const editTempPlano = editForm.bancaInicial < 1000 ? 'QUINZENAL' : 'SEMANAL';
   const editTempClienteSplit = editForm.bancaInicial < 1000 ? 70 : 80;
   const editTempCopySplit = editForm.bancaInicial < 1000 ? 30 : 20;
   const editTempIndicatorSplit = editForm.indicadorId ? (editForm.bancaInicial < 1000 ? 15 : 10) : 0;
   const editTempCompanySplit = editTempCopySplit - editTempIndicatorSplit;
+  const isEditRecommendedMinimumBalance = editForm.bancaInicial >= 100;
+  const canEditIqId = auth.level === 'Admin';
 
-  const buildRegistrationLink = (currentIndicadorId: string) => {
-    const indicadorCodigo = indicators.find((indicator) => indicator.id === currentIndicadorId)?.codigo_interno || '';
-    return `https://iqoption.net/lp/mobile-partner-pwa/?aff=417345&aff_model=revenue${
-      currentIndicadorId ? `&afftrack=${indicadorCodigo}` : ''
-    }`;
+  const buildRegistrationLink = (_currentIndicadorId: string) => {
+    return 'https://iqoption.net/lp/mobile-partner-pwa/?aff=417345&aff_model=revenue';
   };
 
   const openEditUserModal = (user: UserCopy) => {
@@ -197,6 +203,7 @@ export default function Users() {
       !editForm.email ||
       !editForm.whatsapp ||
       !editForm.telegram ||
+      (canEditIqId && !editForm.iqId) ||
       !editForm.bancaInicial ||
       !editForm.dataInicio
     ) {
@@ -218,6 +225,7 @@ export default function Users() {
         email: editForm.email,
         whatsapp: editForm.whatsapp,
         telegram: editForm.telegram,
+        iq_id: canEditIqId ? editForm.iqId : userToUpdate.iq_id,
         indicador_id: editForm.indicadorId,
         banca_inicial: Number(editForm.bancaInicial),
         data_inicio: editForm.dataInicio,
@@ -240,11 +248,23 @@ export default function Users() {
   // Delete User handler
   const handleDeleteUser = async (id: string, name: string) => {
     if (window.confirm(`Tem certeza absoluta que deseja remover o usuário "${name}" do copy trading? Isso também removerá suas faturas e histórico.`)) {
-      await ControlCopyDB.deleteUser(id);
-      await loadAllData();
-      if (selectedUser?.id === id) {
-        setSelectedUser(null);
-        setIsDetailsOpen(false);
+      setDeleteErrorMessage(null);
+
+      try {
+        await ControlCopyDB.deleteUser(id);
+        await loadAllData();
+
+        if (selectedUser?.id === id) {
+          setSelectedUser(null);
+          setIsDetailsOpen(false);
+        }
+
+        setDeleteSuccessMessage(`Cliente ${name} removido com sucesso.`);
+        setTimeout(() => setDeleteSuccessMessage(null), 4000);
+      } catch (error) {
+        setDeleteErrorMessage(
+          error instanceof Error ? error.message : 'Não foi possível remover este cliente agora.'
+        );
       }
     }
   };
@@ -432,6 +452,20 @@ export default function Users() {
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700 flex items-center gap-2">
           <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
           <span>{editSuccessMessage}</span>
+        </div>
+      )}
+
+      {deleteSuccessMessage && (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700 flex items-center gap-2">
+          <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{deleteSuccessMessage}</span>
+        </div>
+      )}
+
+      {deleteErrorMessage && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+          <span>{deleteErrorMessage}</span>
         </div>
       )}
 
@@ -1035,11 +1069,16 @@ export default function Users() {
                     <input
                       type="number"
                       required
-                      min={100}
+                      min={1}
                       value={bancaInicial}
                       onChange={(e) => setBancaInicial(Number(e.target.value))}
                       className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:border-[#FF5500] font-mono font-bold"
                     />
+                    <span className={`mt-1 block text-[10px] ${isRecommendedMinimumBalance ? 'text-zinc-400' : 'text-amber-600 font-semibold'}`}>
+                      {isRecommendedMinimumBalance
+                        ? 'O ideal operacional e trabalhar com banca minima de $100.'
+                        : 'Permitido salvar abaixo de $100, mas o ideal operacional e banca minima de $100.'}
+                    </span>
                   </div>
                   <div>
                     <label className="block text-zinc-700 mb-1">Data de Início *</label>
@@ -1211,10 +1250,26 @@ export default function Users() {
                     <label className="block text-zinc-700 mb-1">ID IQ Option</label>
                     <input
                       type="text"
-                      disabled
+                      disabled={!canEditIqId}
+                      maxLength={9}
                       value={editForm.iqId}
-                      className="w-full px-3 py-3 bg-zinc-100 border border-zinc-200 rounded-xl text-zinc-400 font-mono tracking-widest"
+                      onChange={(e) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          iqId: e.target.value.replace(/\D/g, ''),
+                        }))
+                      }
+                      className={`w-full px-3 py-3 border border-zinc-200 rounded-xl font-mono tracking-widest ${
+                        canEditIqId
+                          ? 'bg-zinc-50 text-zinc-800 focus:outline-none focus:border-[#FF5500]'
+                          : 'bg-zinc-100 text-zinc-400'
+                      }`}
                     />
+                    <span className="mt-1 block text-[10px] text-zinc-400">
+                      {canEditIqId
+                        ? 'Como Admin, você pode atualizar o ID IQ Option deste cliente.'
+                        : 'Somente perfis Admin podem alterar o ID IQ Option.'}
+                    </span>
                   </div>
                   <div>
                     <label className="block text-zinc-700 mb-1">Parceiro Indicador</label>
@@ -1239,13 +1294,18 @@ export default function Users() {
                     <input
                       type="number"
                       required
-                      min={100}
+                      min={1}
                       value={editForm.bancaInicial}
                       onChange={(e) =>
                         setEditForm((current) => ({ ...current, bancaInicial: Number(e.target.value) }))
                       }
                       className="w-full px-3 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:border-[#FF5500] font-mono font-bold"
                     />
+                    <span className={`mt-1 block text-[10px] ${isEditRecommendedMinimumBalance ? 'text-zinc-400' : 'text-amber-600 font-semibold'}`}>
+                      {isEditRecommendedMinimumBalance
+                        ? 'O ideal operacional e trabalhar com banca minima de $100.'
+                        : 'Permitido salvar abaixo de $100, mas o ideal operacional e banca minima de $100.'}
+                    </span>
                   </div>
                   <div>
                     <label className="block text-zinc-700 mb-1">Data de Início *</label>

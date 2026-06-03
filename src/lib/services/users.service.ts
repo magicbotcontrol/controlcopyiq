@@ -82,6 +82,16 @@ export async function addUser(
 }
 
 export async function updateUser(updated: UserCopy) {
+  const users = await getUsers();
+
+  if (!/^\d{9}$/.test(updated.iq_id)) {
+    throw new Error('O ID IQ Option deve possuir exatamente 9 algarismos numéricos.');
+  }
+
+  if (users.some((user) => user.id !== updated.id && user.iq_id === updated.iq_id)) {
+    throw new Error(`Já existe um usuário cadastrado com o ID IQ Option ${updated.iq_id}.`);
+  }
+
   const normalizedUser = buildUpdatedUserPayload(updated);
 
   const { error } = await supabase.from('users_copy').update(normalizedUser).eq('id', updated.id);
@@ -90,9 +100,18 @@ export async function updateUser(updated: UserCopy) {
 }
 
 export async function deleteUser(id: string) {
+  const users = await getUsers();
+  const userToDelete = users.find((user) => user.id === id);
+
+  const { error: billingError } = await supabase.from('cobrancas').delete().eq('user_id', id);
+  assertNoError(billingError);
+
+  const { error: historyError } = await supabase.from('historico_banca').delete().eq('user_id', id);
+  assertNoError(historyError);
+
   const { error } = await supabase.from('users_copy').delete().eq('id', id);
   assertNoError(error);
-  await addLog('Exclusão Usuário', `Usuário ID ${id} removido do sistema`);
+  await addLog('Exclusão Usuário', `Usuário ${userToDelete?.nome || id} removido do sistema`);
 }
 
 export async function recordBalanceUpdate(
@@ -135,4 +154,20 @@ export async function recordBalanceUpdate(
   }
 
   return { success: true, difference };
+}
+
+export async function upsertClientCopy(input: {
+  iq_id: string;
+  banca_inicial: number;
+  data_inicio: string;
+  telegram?: string;
+}) {
+  const { data, error } = await supabase.rpc('upsert_client_copy', {
+    p_iq_id: input.iq_id,
+    p_banca_inicial: input.banca_inicial,
+    p_data_inicio: input.data_inicio,
+    p_telegram: input.telegram ?? '',
+  });
+  assertNoError(error);
+  return data as string;
 }

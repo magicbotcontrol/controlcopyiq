@@ -5,13 +5,14 @@ import {
   Users, 
   Coins, 
   Link2, 
+  Share2,
   Settings, 
   Menu, 
   X, 
   LogOut,
   UserCheck
 } from 'lucide-react';
-import { BRANDING } from '@/branding';
+import { BRANDING } from '../branding';
 import { UserAuth } from '../types';
 
 interface SidebarProps {
@@ -24,14 +25,38 @@ interface SidebarProps {
 export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const menuItems = [
+  const allMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'my-copy', label: 'Meu Copy', icon: Users },
     { id: 'users', label: 'Usuários Copy', icon: Users },
     { id: 'indicators', label: 'Indicadores', icon: UserCheck },
     { id: 'billing', label: 'Cobranças', icon: Coins },
+    { id: 'controlcopy-signup', label: 'Cadastro ControlCopy', icon: Share2 },
     { id: 'links', label: 'Links & Setup', icon: Link2 },
     { id: 'settings', label: 'Config Telegram', icon: Settings },
   ];
+
+  const menuItems = (() => {
+    if (auth.level === 'Cliente') {
+      return allMenuItems.filter((item) => item.id === 'my-copy' || item.id === 'links');
+    }
+
+    if (auth.level === 'Indicador') {
+      return allMenuItems.filter(
+        (item) =>
+          item.id === 'dashboard' ||
+          item.id === 'users' ||
+          item.id === 'billing' ||
+          item.id === 'controlcopy-signup' ||
+          item.id === 'links'
+      );
+    }
+
+    return allMenuItems.filter((item) => item.id !== 'my-copy');
+  })();
+
+  const mobilePrimaryItems = menuItems.filter((item) => item.id !== 'links').slice(0, 4);
+  const showLinksShortcut = menuItems.some((item) => item.id === 'links');
 
   return (
     <>
@@ -221,7 +246,7 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
 
       {/* Mobile Sticky Bottom-Bar Navigation for rapid touch feedback */}
       <nav className="xl:hidden fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-900 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] px-3 flex justify-around items-center z-40 text-xs shadow-xl">
-        {menuItems.slice(0, 4).map((item) => {
+        {mobilePrimaryItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (
@@ -237,15 +262,17 @@ export default function Sidebar({ activeTab, setActiveTab, auth, onLogout }: Sid
             </button>
           );
         })}
-        <button
-          onClick={() => setActiveTab('links')}
-          className={`flex flex-col items-center justify-center gap-1 transition-colors px-2 py-1 rounded-lg ${
-            activeTab === 'links' ? 'text-[#FF5500]' : 'text-zinc-400'
-          }`}
-        >
-          <Link2 className="w-5 h-5" />
-          <span className="text-[10px] scale-90">Links</span>
-        </button>
+        {showLinksShortcut && (
+          <button
+            onClick={() => setActiveTab('links')}
+            className={`flex flex-col items-center justify-center gap-1 transition-colors px-2 py-1 rounded-lg ${
+              activeTab === 'links' ? 'text-[#FF5500]' : 'text-zinc-400'
+            }`}
+          >
+            <Link2 className="w-5 h-5" />
+            <span className="text-[10px] scale-90">Links</span>
+          </button>
+        )}
       </nav>
     </>
   );

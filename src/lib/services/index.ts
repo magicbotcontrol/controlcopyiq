@@ -13,6 +13,7 @@ export {
   updateUser,
   deleteUser,
   recordBalanceUpdate,
+  upsertClientCopy,
 } from './users.service';
 export {
   getCobrancas,
@@ -23,3 +24,8 @@ export {
 } from './billing.service';
 export { triggerTelegramNotification } from './notifications.service';
 export { runDailyAutomations } from './automations.service';
+export {
+  getManageableProfiles,
+  promoteProfileToIndicator,
+  revertIndicatorToOperator,
+} from './admin-users.service';

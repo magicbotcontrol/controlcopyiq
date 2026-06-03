@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   Mail, 
@@ -8,28 +8,41 @@ import {
   CheckCircle2, 
   AlertCircle
 } from 'lucide-react';
-import { BRANDING } from '@/branding';
-import { UserAuth, AccessLevel } from '../types';
+import { BRANDING } from '../branding';
+import { UserAuth } from '../types';
 import { ControlCopyDB } from '../lib/db';
 import { getCurrentAuthProfile, sendPasswordReset, signInWithEmail, signUpWithEmail } from '../lib/auth';
+import SensitiveInputField from './SensitiveInputField';
 
 interface AuthProps {
   onLoginSuccess: (auth: UserAuth) => void;
+  sessionNotice?: string | null;
 }
 
-export default function Auth({ onLoginSuccess }: AuthProps) {
+export default function Auth({ onLoginSuccess, sessionNotice }: AuthProps) {
+  const defaultRegisterLevel = 'Operador' as const;
   const [screen, setScreen] = useState<'login' | 'register' | 'recover'>('login');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const [regNome, setRegNome] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regLevel, setRegLevel] = useState<AccessLevel>('Admin');
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   const [recEmail, setRecEmail] = useState('');
   const [alertMsg, setAlertMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  useEffect(() => {
+    if (!sessionNotice) {
+      return;
+    }
+
+    setAlertMsg({ type: 'error', text: sessionNotice });
+    setScreen('login');
+  }, [sessionNotice]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +84,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         email: regEmail,
         password: regPassword,
         nome: regNome,
-        level: regLevel,
+        level: defaultRegisterLevel,
       });
 
       if (!session) {
@@ -114,7 +127,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
       await sendPasswordReset(recEmail);
       setAlertMsg({
         type: 'success',
-        text: `Instruções de redefinição de credenciais enviadas para ${recEmail} com sucesso!`,
+        text: `Solicitacao de redefinicao registrada para ${recEmail}. Verifique caixa de entrada, spam e lixo eletronico.`,
       });
 
       setTimeout(() => {
@@ -183,15 +196,16 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
 
             <div>
               <label className="block mb-1">Senha de Acesso</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:border-[#FF5500]"
-                />
-              </div>
+              <SensitiveInputField
+                value={password}
+                onChange={setPassword}
+                revealed={showPassword}
+                onToggleReveal={() => setShowPassword((current) => !current)}
+                leftIcon={Lock}
+                ariaLabelReveal="Revelar senha"
+                ariaLabelHide="Ocultar senha"
+                inputClassName="bg-zinc-50"
+              />
             </div>
 
             <div className="flex justify-between items-center text-[11px] pt-1">
@@ -263,31 +277,27 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
 
             <div>
               <label className="block mb-1">Senha de Acesso *</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5" />
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
-                  placeholder="Minimo de 6 caracteres"
-                  className="w-full pl-9 pr-3 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none"
-                />
-              </div>
+              <SensitiveInputField
+                value={regPassword}
+                onChange={setRegPassword}
+                revealed={showRegPassword}
+                onToggleReveal={() => setShowRegPassword((current) => !current)}
+                leftIcon={Lock}
+                required
+                minLength={6}
+                placeholder="Minimo de 6 caracteres"
+                ariaLabelReveal="Revelar senha"
+                ariaLabelHide="Ocultar senha"
+                inputClassName="bg-zinc-50"
+              />
             </div>
 
-            <div>
-              <label className="block mb-1">Selecione seu Nível Operacional Inicial</label>
-              <select
-                value={regLevel}
-                onChange={(e) => setRegLevel(e.target.value as any)}
-                className="w-full px-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none font-sans font-bold text-zinc-700"
-              >
-                <option value="Admin">Admin (Acesso Total)</option>
-                <option value="Operador">Operador (Apenas Banca)</option>
-                <option value="Financeiro">Financeiro (Apenas Contabilidade)</option>
-              </select>
+            <div className="rounded-xl border border-zinc-150 bg-zinc-50 px-3.5 py-3 text-[11px] text-zinc-500 leading-relaxed">
+              <span className="block font-bold text-zinc-700 mb-1">Nível de acesso</span>
+              <span>
+                O acesso inicial é criado como <strong className="text-zinc-900">Operador</strong>. Perfis
+                administrativos e financeiros ficam sob gestão direta no banco.
+              </span>
             </div>
 
             <button
@@ -314,7 +324,10 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         {/* 3. RECOVER PASSWORD SCREEN */}
         {screen === 'recover' && (
           <form onSubmit={handleRecover} className="space-y-4 text-xs font-semibold text-zinc-700">
-            <p className="text-xs text-zinc-400 mb-2 leading-relaxed font-normal">Digite o seu e-mail cadastrado. Nós enviaremos um link seguro para alteração imediata da sua senha administrativa.</p>
+            <p className="text-xs text-zinc-400 mb-2 leading-relaxed font-normal">
+              Digite o seu e-mail cadastrado. Enviaremos um link seguro para alteracao da senha.
+              Se nao localizar a mensagem, verifique spam, lixo eletronico e promocoes.
+            </p>
             
             <div>
               <label className="block mb-1">E-mail Cadastrado *</label>

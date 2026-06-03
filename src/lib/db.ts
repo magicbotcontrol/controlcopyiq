@@ -13,8 +13,11 @@ import {
   getHistoricos,
   getIndicators,
   getLogs,
+  getManageableProfiles,
   getUsers,
+  promoteProfileToIndicator,
   recordBalanceUpdate,
+  revertIndicatorToOperator,
   runDailyAutomations,
   saveAuth,
   saveConfig,
@@ -22,9 +25,10 @@ import {
   updateCobrancaStatus,
   updateIndicator,
   updateUser,
+  upsertClientCopy,
   type NewUserInput,
 } from './services';
-import { Indicador, UserCopy, Configuracoes, UserAuth } from '../types';
+import { Indicador, UserCopy, Configuracoes, UserAuth, PlatformUserProfile } from '../types';
 
 export { dateUtils };
 
@@ -57,6 +61,10 @@ export class ControlCopyDB {
     return getLogs();
   }
 
+  static async getManageableProfiles(): Promise<PlatformUserProfile[]> {
+    return getManageableProfiles();
+  }
+
   static async saveConfig(data: Configuracoes) {
     return saveConfig(data);
   }
@@ -81,6 +89,14 @@ export class ControlCopyDB {
     return deleteIndicator(id);
   }
 
+  static async promoteProfileToIndicator(profileId: string, codigoInterno: string) {
+    return promoteProfileToIndicator(profileId, codigoInterno);
+  }
+
+  static async revertIndicatorToOperator(profileId: string) {
+    return revertIndicatorToOperator(profileId);
+  }
+
   static async addUser(input: NewUserInput): Promise<{ success: boolean; message?: string; user?: UserCopy }> {
     return addUser(input);
   }
@@ -95,6 +111,15 @@ export class ControlCopyDB {
 
   static async recordBalanceUpdate(userId: string, targetBalance: number) {
     return recordBalanceUpdate(userId, targetBalance);
+  }
+
+  static async upsertClientCopy(input: {
+    iq_id: string;
+    banca_inicial: number;
+    data_inicio: string;
+    telegram?: string;
+  }) {
+    return upsertClientCopy(input);
   }
 
   static async billUserCycle(userId: string, profit: number) {

@@ -26,7 +26,7 @@ vi.mock('./indicators.service', () => ({
   getIndicators: mocks.getIndicatorsMock,
 }));
 
-import { addUser, buildUpdatedUserPayload, buildUserPayload, recordBalanceUpdate } from './users.service';
+import { addUser, buildUpdatedUserPayload, buildUserPayload, deleteUser, recordBalanceUpdate, updateUser } from './users.service';
 
 function createBaseUser(overrides: Partial<UserCopy> = {}): UserCopy {
   return {
@@ -141,6 +141,152 @@ describe('users.service', () => {
       receita_empresa: 20,
       proxima_cobranca: '2026-05-17',
     });
+  });
+
+  it('permite atualizar usuario com novo iq_id valido e unico', async () => {
+    const updateEqMock = vi.fn().mockResolvedValue({ error: null });
+    const updateMock = vi.fn(() => ({ eq: updateEqMock }));
+    const selectOrderUsersMock = vi.fn().mockResolvedValue({
+      data: [createBaseUser()],
+      error: null,
+    });
+
+    mocks.fromMock.mockImplementation((table: string) => {
+      if (table === 'users_copy') {
+        return {
+          select: () => ({ order: selectOrderUsersMock }),
+          update: updateMock,
+        };
+      }
+
+      throw new Error(`Tabela não mockada: ${table}`);
+    });
+
+    await updateUser(
+      createBaseUser({
+        iq_id: '987654321',
+        banca_inicial: 1500,
+        data_inicio: '2026-05-10',
+      })
+    );
+
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        iq_id: '987654321',
+        plano: 'SEMANAL',
+        proxima_cobranca: '2026-05-17',
+      })
+    );
+    expect(updateEqMock).toHaveBeenCalledWith('id', 'usr-1');
+  });
+
+  it('rejeita edicao quando o iq_id atualizado e invalido', async () => {
+    const selectOrderUsersMock = vi.fn().mockResolvedValue({
+      data: [createBaseUser()],
+      error: null,
+    });
+
+    mocks.fromMock.mockImplementation((table: string) => {
+      if (table === 'users_copy') {
+        return {
+          select: () => ({ order: selectOrderUsersMock }),
+          update: vi.fn(),
+        };
+      }
+
+      throw new Error(`Tabela não mockada: ${table}`);
+    });
+
+    await expect(
+      updateUser(
+        createBaseUser({
+          iq_id: '12345',
+        })
+      )
+    ).rejects.toThrow('O ID IQ Option deve possuir exatamente 9 algarismos numéricos.');
+
+    expect(mocks.addLogMock).not.toHaveBeenCalled();
+  });
+
+  it('rejeita edicao quando o iq_id atualizado pertence a outro usuario', async () => {
+    const selectOrderUsersMock = vi.fn().mockResolvedValue({
+      data: [
+        createBaseUser(),
+        createBaseUser({
+          id: 'usr-2',
+          iq_id: '987654321',
+          nome: 'Cliente Duplicado',
+        }),
+      ],
+      error: null,
+    });
+
+    mocks.fromMock.mockImplementation((table: string) => {
+      if (table === 'users_copy') {
+        return {
+          select: () => ({ order: selectOrderUsersMock }),
+          update: vi.fn(),
+        };
+      }
+
+      throw new Error(`Tabela não mockada: ${table}`);
+    });
+
+    await expect(
+      updateUser(
+        createBaseUser({
+          iq_id: '987654321',
+        })
+      )
+    ).rejects.toThrow('Já existe um usuário cadastrado com o ID IQ Option 987654321.');
+
+    expect(mocks.addLogMock).not.toHaveBeenCalled();
+  });
+
+  it('remove cobrancas, historico e usuario antes de registrar log', async () => {
+    const deleteBillingEqMock = vi.fn().mockResolvedValue({ error: null });
+    const deleteHistoryEqMock = vi.fn().mockResolvedValue({ error: null });
+    const deleteUserEqMock = vi.fn().mockResolvedValue({ error: null });
+    const deleteBillingMock = vi.fn(() => ({ eq: deleteBillingEqMock }));
+    const deleteHistoryMock = vi.fn(() => ({ eq: deleteHistoryEqMock }));
+    const deleteUserMock = vi.fn(() => ({ eq: deleteUserEqMock }));
+    const selectOrderUsersMock = vi.fn().mockResolvedValue({
+      data: [createBaseUser({ nome: 'Cliente Removido' })],
+      error: null,
+    });
+
+    mocks.fromMock.mockImplementation((table: string) => {
+      if (table === 'users_copy') {
+        return {
+          select: () => ({ order: selectOrderUsersMock }),
+          delete: deleteUserMock,
+        };
+      }
+
+      if (table === 'cobrancas') {
+        return {
+          delete: deleteBillingMock,
+        };
+      }
+
+      if (table === 'historico_banca') {
+        return {
+          delete: deleteHistoryMock,
+        };
+      }
+
+      throw new Error(`Tabela não mockada: ${table}`);
+    });
+
+    await deleteUser('usr-1');
+
+    expect(deleteBillingEqMock).toHaveBeenCalledWith('user_id', 'usr-1');
+    expect(deleteHistoryEqMock).toHaveBeenCalledWith('user_id', 'usr-1');
+    expect(deleteUserEqMock).toHaveBeenCalledWith('id', 'usr-1');
+    expect(mocks.addLogMock).toHaveBeenCalledWith(
+      'Exclusão Usuário',
+      'Usuário Cliente Removido removido do sistema'
+    );
   });
 
   it('atualiza banca e registra historico com diferenca positiva', async () => {

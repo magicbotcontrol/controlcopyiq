@@ -18,6 +18,7 @@ export interface UserCopy {
   telegram: string;
   iq_id: string; // 9 numbers
   indicador_id: string; // references Indicador.id
+  owner_id?: string | null; // references auth.users.id (cliente autenticado)
   banca_inicial: number;
   banca_atual: number;
   plano: 'QUINZENAL' | 'SEMANAL';
@@ -61,13 +62,26 @@ export interface Configuracoes {
   telegram_chat_id: string;
 }
 
-export type AccessLevel = 'Admin' | 'Operador' | 'Financeiro';
+export type AccessLevel = 'Admin' | 'Indicador' | 'Cliente' | 'Operador' | 'Financeiro';
 
 export interface UserAuth {
   id?: string;
   email: string;
   nome: string;
   level: AccessLevel;
+  indicador_id?: string | null;
+}
+
+export interface PlatformUserProfile {
+  id: string;
+  email: string;
+  nome: string;
+  level: AccessLevel;
+  whatsapp?: string;
+  indicador_id?: string | null;
+  indicador_nome?: string | null;
+  indicador_codigo_interno?: string | null;
+  created_at?: string;
 }
 
 export interface SystemLog {

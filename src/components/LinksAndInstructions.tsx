@@ -1,39 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState } from 'react';
 import { 
   Copy, 
   Check, 
   ExternalLink, 
-  Share2, 
-  HelpCircle, 
   Info, 
-  Sparkles, 
-  CheckCircle2, 
   Compass, 
-  Database,
-  ArrowUpRight
 } from 'lucide-react';
-import { ControlCopyDB } from '../lib/db';
-import { Indicador } from '../types';
+import { IQ_OPTION_COPY_TRADING_LINK, IQ_OPTION_REGISTRATION_LINK } from '../lib/constants/links';
+import { UserAuth } from '../types';
 
-export default function LinksAndInstructions() {
-  const [indicators, setIndicators] = useState<Indicador[]>([]);
-  const [selectedIndCode, setSelectedIndCode] = useState('');
-  
-  // Clipboard copied status
+interface LinksAndInstructionsProps {
+  auth: UserAuth;
+}
+
+export default function LinksAndInstructions({ auth }: LinksAndInstructionsProps) {
   const [copiedLink, setCopiedLink] = useState<'cadastro' | 'copy' | null>(null);
-
-  useEffect(() => {
-    const loadIndicators = async () => {
-      setIndicators(await ControlCopyDB.getIndicators());
-    };
-
-    loadIndicators();
-  }, []);
-
-  const baseRegLink = 'https://iqoption.net/lp/mobile-partner-pwa/?aff=417345&aff_model=revenue';
-  const finalRegLink = selectedIndCode ? `${baseRegLink}&afftrack=${selectedIndCode}` : baseRegLink;
-  const copyTradingLink = 'https://iqoption.com/pwa/copy-trading/user/178572482?aff=417345';
+  const finalRegLink = IQ_OPTION_REGISTRATION_LINK;
+  const copyTradingLink = IQ_OPTION_COPY_TRADING_LINK;
 
   const copyToClipboard = (text: string, type: 'cadastro' | 'copy') => {
     navigator.clipboard.writeText(text);
@@ -47,7 +30,7 @@ export default function LinksAndInstructions() {
     <div className="space-y-6 max-w-4xl pb-16">
       <div>
         <h1 className="text-2xl font-extrabold text-zinc-900 tracking-tight">Setup Operacional & Links Rápidos</h1>
-        <p className="text-sm text-zinc-500">Acesse links de indicação conectados a afiliados e instruções de faturamento do copy trading.</p>
+        <p className="text-sm text-zinc-500">Acesse os links oficiais da IQ Option e as instrucoes operacionais do copy trading.</p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -57,24 +40,9 @@ export default function LinksAndInstructions() {
           <div className="flex items-center gap-2 pb-2 border-b border-zinc-100">
             <Compass className="w-5 h-5 text-[#FF5500]" />
             <div>
-              <h3 className="font-bold text-sm text-zinc-900">Gerador de Links de Afiliados</h3>
-              <p className="text-[10px] text-zinc-400 font-mono">Customize links vinculando-os a códigos de parceiros</p>
+              <h3 className="font-bold text-sm text-zinc-900">Links Oficiais IQ Option</h3>
+              <p className="text-[10px] text-zinc-400 font-mono">Esta area preserva apenas os links oficiais, sem o cadastro do ControlCopy.</p>
             </div>
-          </div>
-
-          {/* Quick indicator select */}
-          <div className="space-y-1.5 text-xs font-semibold">
-            <label className="text-zinc-550">Selecione o Parceiro (Opcional):</label>
-            <select
-              value={selectedIndCode}
-              onChange={(e) => setSelectedIndCode(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl"
-            >
-              <option value="">Nenhum (Direto)</option>
-              {indicators.map(ind => (
-                <option key={ind.id} value={ind.codigo_interno}>{ind.nome} ({ind.codigo_interno})</option>
-              ))}
-            </select>
           </div>
 
           <div className="space-y-4 pt-1">

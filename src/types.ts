@@ -84,6 +84,57 @@ export interface PlatformUserProfile {
   created_at?: string;
 }
 
+export interface InboundPromoValidation {
+  partner: string;
+  promo_code: string;
+  trial_days: number | null;
+  is_valid: boolean;
+}
+
+export interface CampaignAuditFilters {
+  partner?: string;
+  promoCode?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface CampaignAuditPageRequest {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasNextPage: boolean;
+}
+
+export interface InboundPartnerCampaign {
+  id: string;
+  auth_user_id: string | null;
+  partner: string;
+  promo_code: string | null;
+  email: string;
+  indicator_code: string | null;
+  source_path: string;
+  source_query: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface CopyTradingCampaignRedemption {
+  id: string;
+  auth_user_id: string;
+  partner: string;
+  campaign_code: string;
+  trial_days: number;
+  entitlement_expires_at: string;
+  inbound_campaign_id: string | null;
+  applied_at: string;
+  created_at: string;
+}
+
 export interface SystemLog {
   id: string;
   acao: string;

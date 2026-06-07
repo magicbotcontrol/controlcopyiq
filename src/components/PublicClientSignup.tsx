@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { AlertCircle, ArrowRight, Lock, Mail, Phone, User } from 'lucide-react';
 import { BRANDING } from '../branding';
 import { signUpWithEmail, signInWithEmail } from '../lib/auth';
 import SensitiveInputField from './SensitiveInputField';
+import { ControlCopyDB } from '../lib/db';
 
 interface PublicClientSignupProps {
   indicatorCode: string;
@@ -14,8 +15,33 @@ function normalizeIndicatorCode(value: string) {
   return value.trim().toUpperCase();
 }
 
+function readPartnerContext() {
+  if (typeof window === 'undefined') {
+    return {
+      source: '',
+      promo: '',
+      path: '/',
+      query: {} as Record<string, string>,
+    };
+  }
+
+  const url = new URL(window.location.href);
+  const params = new URLSearchParams(url.search);
+
+  return {
+    source: (params.get('source') || '').trim().toLowerCase(),
+    promo: (params.get('promo') || '').trim().toUpperCase(),
+    path: url.pathname || '/',
+    query: Object.fromEntries(params.entries()),
+  };
+}
+
+type PromoState = 'idle' | 'loading' | 'valid' | 'invalid';
+
 export default function PublicClientSignup({ indicatorCode, onSuccess }: PublicClientSignupProps) {
   const normalizedCode = useMemo(() => normalizeIndicatorCode(indicatorCode), [indicatorCode]);
+  const partnerContext = useMemo(() => readPartnerContext(), []);
+  const isMagicCopyBotSource = partnerContext.source === 'magiccopybot';
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
@@ -23,6 +49,62 @@ export default function PublicClientSignup({ indicatorCode, onSuccess }: PublicC
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alertMsg, setAlertMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [promoState, setPromoState] = useState<PromoState>(
+    isMagicCopyBotSource && partnerContext.promo ? 'loading' : 'idle'
+  );
+  const [promoTrialDays, setPromoTrialDays] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isMagicCopyBotSource || !partnerContext.promo) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const validatePromo = async () => {
+      try {
+        setPromoState('loading');
+        const result = await ControlCopyDB.validateInboundPromo(partnerContext.source, partnerContext.promo);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (!result.is_valid) {
+          setPromoState('invalid');
+          setPromoTrialDays(null);
+          setAlertMsg({
+            type: 'error',
+            text: `A promocao ${partnerContext.promo} e invalida para este cadastro. Solicite um link atualizado antes de continuar.`,
+          });
+          return;
+        }
+
+        setPromoState('valid');
+        setPromoTrialDays(result.trial_days);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setPromoState('invalid');
+        setPromoTrialDays(null);
+        setAlertMsg({
+          type: 'error',
+          text:
+            error instanceof Error
+              ? error.message
+              : 'Nao foi possivel validar a promocao agora. Tente novamente em instantes.',
+        });
+      }
+    };
+
+    void validatePromo();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isMagicCopyBotSource, partnerContext.promo, partnerContext.source]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +112,14 @@ export default function PublicClientSignup({ indicatorCode, onSuccess }: PublicC
 
     if (!nome || !email || !whatsapp || !password) {
       setAlertMsg({ type: 'error', text: 'Preencha nome, e-mail, WhatsApp e senha.' });
+      return;
+    }
+
+    if (isMagicCopyBotSource && partnerContext.promo && promoState !== 'valid') {
+      setAlertMsg({
+        type: 'error',
+        text: 'A promocao informada nao foi validada. Gere um novo link antes de concluir o cadastro.',
+      });
       return;
     }
 
@@ -42,6 +132,10 @@ export default function PublicClientSignup({ indicatorCode, onSuccess }: PublicC
         whatsapp,
         level: 'Cliente',
         indicadorCodigo: normalizedCode,
+        partnerSource: isMagicCopyBotSource ? partnerContext.source : undefined,
+        promoCode: isMagicCopyBotSource ? partnerContext.promo || undefined : undefined,
+        partnerSourcePath: isMagicCopyBotSource ? partnerContext.path : undefined,
+        partnerSourceQuery: isMagicCopyBotSource ? partnerContext.query : undefined,
       });
 
       if (!session) {
@@ -87,6 +181,22 @@ export default function PublicClientSignup({ indicatorCode, onSuccess }: PublicC
             Cadastro de cliente via parceiro <span className="font-mono font-black text-zinc-900">{normalizedCode}</span>
           </p>
         </div>
+
+        {isMagicCopyBotSource && partnerContext.promo && (
+          <div
+            className={`rounded-xl border px-3.5 py-3 text-[11px] font-semibold ${
+              promoState === 'invalid'
+                ? 'border-red-200 bg-red-50 text-red-700'
+                : 'border-amber-200 bg-amber-50 text-amber-700'
+            }`}
+          >
+            {promoState === 'loading' && `Validando promocao ${partnerContext.promo}...`}
+            {promoState === 'valid' &&
+              `Promo aplicada: ${partnerContext.promo}${promoTrialDays ? ` (${promoTrialDays} dias de trial)` : ''}.`}
+            {promoState === 'invalid' &&
+              `Promocao invalida: ${partnerContext.promo}. Solicite um novo link do MagicCopyBot.`}
+          </div>
+        )}
 
         {alertMsg && (
           <div
@@ -163,10 +273,10 @@ export default function PublicClientSignup({ indicatorCode, onSuccess }: PublicC
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (isMagicCopyBotSource && partnerContext.promo && promoState !== 'valid')}
             className="w-full py-3 bg-[#FF5500] hover:bg-[#FF4500] text-black rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1 shadow-md shadow-[#FF5500]/15 cursor-pointer"
           >
-            {isSubmitting ? 'Criando...' : 'Criar minha conta'}
+            {isSubmitting ? 'Criando...' : promoState === 'loading' ? 'Validando promo...' : 'Criar minha conta'}
             <ArrowRight className="w-4 h-4 text-black stroke-[3px]" />
           </button>
 

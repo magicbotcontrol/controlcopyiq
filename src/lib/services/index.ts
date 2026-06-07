@@ -24,6 +24,8 @@ export {
 } from './billing.service';
 export { triggerTelegramNotification } from './notifications.service';
 export { runDailyAutomations } from './automations.service';
+export { validateInboundPromo } from './partner-campaigns.service';
+export { getInboundPartnerCampaigns, getCampaignRedemptions } from './campaign-audit.service';
 export {
   getManageableProfiles,
   promoteProfileToIndicator,

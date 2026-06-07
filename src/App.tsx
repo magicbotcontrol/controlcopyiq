@@ -174,7 +174,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 xl:p-8 pb-[calc(6.5rem+env(safe-area-inset-bottom))] xl:pb-8">
-        {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
+        {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} auth={auth} />}
         {activeTab === 'users' && <Users auth={auth} />}
         {activeTab === 'indicators' && <Indicators auth={auth} />}
         {activeTab === 'billing' && <Billing />}

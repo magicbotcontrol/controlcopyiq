@@ -9,6 +9,10 @@ interface SignUpInput {
   level?: AccessLevel;
   indicadorCodigo?: string;
   whatsapp?: string;
+  partnerSource?: string;
+  promoCode?: string;
+  partnerSourcePath?: string;
+  partnerSourceQuery?: Record<string, string>;
 }
 
 const AUTH_STORAGE_KEY_PATTERN = /^sb-/;
@@ -292,11 +296,21 @@ export async function signUpWithEmail(input: SignUpInput) {
         level: desiredLevel,
         indicador_codigo: input.indicadorCodigo,
         whatsapp: input.whatsapp,
+        partner_source: input.partnerSource,
+        promo_code: input.promoCode,
+        partner_source_path: input.partnerSourcePath,
+        partner_source_query: input.partnerSourceQuery,
       },
     },
   });
 
   if (error) {
+    const normalizedMessage = error.message.toLowerCase();
+
+    if (normalizedMessage.includes('promo_invalida')) {
+      throw new Error('A promocao informada e invalida ou expirou. Gere um novo link antes de continuar.');
+    }
+
     throw error;
   }
 

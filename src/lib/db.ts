@@ -10,7 +10,9 @@ import {
   getAuth,
   getCobrancas,
   getConfig,
+  getCampaignRedemptions,
   getHistoricos,
+  getInboundPartnerCampaigns,
   getIndicators,
   getLogs,
   getManageableProfiles,
@@ -26,9 +28,22 @@ import {
   updateIndicator,
   updateUser,
   upsertClientCopy,
+  validateInboundPromo,
   type NewUserInput,
 } from './services';
-import { Indicador, UserCopy, Configuracoes, UserAuth, PlatformUserProfile } from '../types';
+import {
+  Indicador,
+  UserCopy,
+  Configuracoes,
+  CampaignAuditFilters,
+  CampaignAuditPageRequest,
+  CopyTradingCampaignRedemption,
+  InboundPartnerCampaign,
+  PaginatedResult,
+  UserAuth,
+  PlatformUserProfile,
+  InboundPromoValidation,
+} from '../types';
 
 export { dateUtils };
 
@@ -63,6 +78,24 @@ export class ControlCopyDB {
 
   static async getManageableProfiles(): Promise<PlatformUserProfile[]> {
     return getManageableProfiles();
+  }
+
+  static async getInboundPartnerCampaigns(
+    filters: CampaignAuditFilters = {},
+    pageRequest: CampaignAuditPageRequest = {}
+  ): Promise<PaginatedResult<InboundPartnerCampaign>> {
+    return getInboundPartnerCampaigns(filters, pageRequest);
+  }
+
+  static async getCampaignRedemptions(
+    filters: CampaignAuditFilters = {},
+    pageRequest: CampaignAuditPageRequest = {}
+  ): Promise<PaginatedResult<CopyTradingCampaignRedemption>> {
+    return getCampaignRedemptions(filters, pageRequest);
+  }
+
+  static async validateInboundPromo(partner: string, promoCode: string): Promise<InboundPromoValidation> {
+    return validateInboundPromo(partner, promoCode);
   }
 
   static async saveConfig(data: Configuracoes) {
